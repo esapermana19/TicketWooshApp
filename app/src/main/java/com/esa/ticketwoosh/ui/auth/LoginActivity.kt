@@ -22,13 +22,13 @@ import android.view.ViewGroup.LayoutParams
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.esa.ticketwoosh.data.api.ApiClient
+import com.esa.ticketwoosh.ui.booking.BookingActivity
 import com.esa.ticketwoosh.utils.SessionManager
 
 class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 1. PENGAMAN: Paksa tema AppCompat agar tidak crash/mental saat membuat View lewat kode
-        setTheme(androidx.appcompat.R.style.Theme_AppCompat_Light_NoActionBar)
 
         super.onCreate(savedInstanceState)
 
@@ -348,14 +348,19 @@ class LoginActivity : AppCompatActivity() {
 
                             // 2. PINDAH KE DASHBOARD / HALAMAN UTAMA
                             // Sementara kita buat toast dulu, nanti kita ganti ke DashboardActivity Anda
-                            Toast.makeText(this@LoginActivity, "Masuk ke Dashboard...", Toast.LENGTH_SHORT).show()
+                            val intent = Intent(this@LoginActivity, BookingActivity::class.java)
+                            startActivity(intent)
+
+                            // Menutup LoginActivity agar user tidak bisa kembali ke halaman login dengan tombol 'Back'
+                            finish()
 
                         } else {
                             val errorJson = response.errorBody()?.string()
                             Toast.makeText(this@LoginActivity, "Laravel Reject: $errorJson", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        Toast.makeText(this@LoginActivity, "Error Koneksi: Server tidak merespon!", Toast.LENGTH_LONG).show()
+                        // Menampilkan pesan error asli dari Android/Retrofit
+                        Toast.makeText(this@LoginActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                     } finally {
                         loginButton.isEnabled = true
                         loginButton.text = "Login"

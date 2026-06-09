@@ -25,7 +25,7 @@ class RegisterActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 1. PENGAMAN: Paksa tema AppCompat agar tidak crash saat inflate view via kode
-        setTheme(androidx.appcompat.R.style.Theme_AppCompat_Light_NoActionBar)
+
 
         super.onCreate(savedInstanceState)
 
