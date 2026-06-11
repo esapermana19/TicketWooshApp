@@ -15,6 +15,10 @@
         android:theme="@style/Theme.TicketWoosh">
 
         <activity
+            android:name=".ui.booking.TicketActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.NoActionBar"/>
+        <activity
             android:name=".ui.booking.PaymentActivity"
             android:exported="false"
             android:theme="@style/Theme.AppCompat.NoActionBar"/>

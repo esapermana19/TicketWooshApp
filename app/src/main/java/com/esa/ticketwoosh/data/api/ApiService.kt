@@ -18,6 +18,8 @@ import retrofit2.http.Header
 import retrofit2.http.Headers
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.http.Path
+import com.esa.ticketwoosh.data.model.TicketDetailResponse
 
 interface ApiService {
 
@@ -60,11 +62,17 @@ interface ApiService {
         @Body request: CheckoutRequest
     ): Response<CheckoutResponse>
 
-    @FormUrlEncoded
+    @Headers("Accept: application/json")
     @POST("payment/checkout")
     suspend fun checkoutPayment(
-        @Field("total_price") totalPrice: Int,
-        @Field("schedule_id") scheduleId: Int,
-        @Field("selected_seats") selectedSeats: String
+        @Header("Authorization") token: String,
+        @Body request: com.esa.ticketwoosh.data.model.PaymentRequest
     ): Response<PaymentResponse>
+
+    @Headers("Accept: application/json")
+    @GET("payment/ticket/{order_id}")
+    suspend fun getTicketDetails(
+        @Header("Authorization") token: String, // <- Wajib bawa token login
+        @Path("order_id") orderId: String       // <- Mengisi {order_id} di URL
+    ): Response<TicketDetailResponse>
 }

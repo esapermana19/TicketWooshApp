@@ -653,11 +653,25 @@ class SeatActivity : AppCompatActivity() {
                 // Hitung total harga dinamis berdasarkan jumlah kursi yang dipilih
                 val hitungTotalHarga = selectedSeats.size * cleanPrice 
 
+                val token = SessionManager(this@SeatActivity).fetchAuthToken()
+                if (token == null) {
+                    loadingOverlay.visibility = View.GONE
+                    Toast.makeText(this@SeatActivity, "Sesi login tidak valid. Silakan login kembali.", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                val formattedToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
+
                 // 2. Panggil API Laravel yang terhubung ke Midtrans Snap
+                // Test sesuai format yang diminta: {"booking_id": 1, "total_price": 100000, "payment_method": "bank_transfer"}
+                val paymentRequest = com.esa.ticketwoosh.data.model.PaymentRequest(
+                    bookingId = 1,
+                    totalPrice = 100000,
+                    paymentMethod = "bank_transfer"
+                )
+                
                 val response = ApiClient.instance.checkoutPayment(
-                    totalPrice = hitungTotalHarga,
-                    scheduleId = scheduleId, // Variabel scheduleId dari intent di atas
-                    selectedSeats = seatsString
+                    token = formattedToken,
+                    request = paymentRequest
                 )
 
                 loadingOverlay.visibility = View.GONE
@@ -668,10 +682,32 @@ class SeatActivity : AppCompatActivity() {
                     // 3. OPER URL KASIR MIDTRANS KE PAYMENT ACTIVITY (WEBVIEW)
                     val intent = Intent(this@SeatActivity, PaymentActivity::class.java)
                     intent.putExtra("PAYMENT_URL", urlPembayaranMidtrans)
+                    
+                    // Kirim juga data tiket agar nanti diteruskan ke TicketActivity
+                    intent.putExtra("departure_station", departureStation)
+                    intent.putExtra("arrival_station", arrivalStation)
+                    intent.putExtra("date_display", dateDisplay)
+                    intent.putExtra("departure_time", departureTime)
+                    intent.putExtra("arrival_time", arrivalTime)
+                    intent.putExtra("train_code", trainCode)
+                    intent.putExtra("train_class", trainClass)
+                    intent.putExtra("seat_number", seatsString)
+                    intent.putExtra("passenger_name", if (passengerNames.isNotEmpty()) passengerNames.joinToString(", ") else "Penumpang")
+                    
                     startActivity(intent)
                     
+                } else if (response.code() == 422) {
+                    val errorBody = response.errorBody()?.string() ?: "Data pembayaran tidak valid (422)."
+                    
+                    // Tampilkan pesan error ke user menggunakan AlertDialog agar lebih jelas
+                    AlertDialog.Builder(this@SeatActivity)
+                        .setTitle("Validasi Error (422)")
+                        .setMessage(errorBody)
+                        .setPositiveButton("OK", null)
+                        .show()
+                        
                 } else {
-                    Toast.makeText(this@SeatActivity, "Gagal membuat sesi pembayaran server.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SeatActivity, "Gagal membuat sesi pembayaran. Code: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
 
             } catch (e: Exception) {
