@@ -28,7 +28,10 @@ data class ScheduleItem(
     val train: TrainItem,
     /** Jumlah kursi tersedia dari API. null = field belum ada di response (Gson tidak set default Kotlin). */
     @SerializedName("available_seats")
-    val availableSeats: Int? = null
+    val availableSeats: Int? = null,
+    
+    @SerializedName("train_class")
+    val trainClass: String? = null
 )
 
 data class StationItem(

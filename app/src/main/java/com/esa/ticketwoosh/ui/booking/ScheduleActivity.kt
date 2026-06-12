@@ -401,9 +401,8 @@ class ScheduleActivity : AppCompatActivity() {
                 setTextColor(textColorPrimary)
             }
 
-            // Tentukan Kelas dinamis berdasarkan ID atau harga
             val priceAmount = item.price.toDoubleOrNull() ?: 0.0
-            val className = when {
+            val className = item.trainClass ?: when {
                 priceAmount >= 400000.0 -> "FIRST CLASS"
                 priceAmount >= 250000.0 -> "BUSINESS CLASS"
                 else -> "PREMIUM ECONOMY"
