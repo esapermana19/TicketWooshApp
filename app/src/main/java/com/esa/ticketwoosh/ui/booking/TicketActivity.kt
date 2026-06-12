@@ -1,5 +1,6 @@
 package com.esa.ticketwoosh.ui.booking
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -9,7 +10,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.esa.ticketwoosh.R
+import com.esa.ticketwoosh.data.api.ApiClient
+import com.esa.ticketwoosh.data.model.PaymentRequest
+import com.esa.ticketwoosh.utils.SessionManager
+import kotlinx.coroutines.launch
 
 class TicketActivity : AppCompatActivity() {
 
@@ -24,6 +30,9 @@ class TicketActivity : AppCompatActivity() {
     private var trainClass: String = "Premium Economy"
     private var seatNumber: String = "1A, 1B"
     private var passengerName: String = "Esa Putra"
+    private var bookingId: Int = 0
+    private var status: String = "sukses"
+    private var totalAmount: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +48,9 @@ class TicketActivity : AppCompatActivity() {
         intent.getStringExtra("train_class")?.let { trainClass = it }
         intent.getStringExtra("seat_number")?.let { seatNumber = it }
         intent.getStringExtra("passenger_name")?.let { passengerName = it }
+        bookingId = intent.getIntExtra("booking_id", 0)
+        intent.getStringExtra("status")?.let { status = it }
+        totalAmount = intent.getIntExtra("total_amount", 0)
 
         val density = resources.displayMetrics.density
         val wooshRed = resources.getColor(R.color.woosh_red, theme)
@@ -115,13 +127,19 @@ class TicketActivity : AppCompatActivity() {
 
         // Badge Status "SUCCESS / LUNAS"
         val statusBadge = TextView(this).apply {
-            text = "SUKSES"
+            text = status.uppercase()
             textSize = 11f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
             setPadding((10 * density).toInt(), (4 * density).toInt(), (10 * density).toInt(), (4 * density).toInt())
+            val statusColor = when(status.lowercase()) {
+                "completed", "paid", "sukses", "success" -> "#28A745"
+                "pending" -> "#FFC107"
+                "failed", "cancelled" -> "#DC3545"
+                else -> "#6C757D"
+            }
             setBackgroundDrawable(GradientDrawable().apply {
-                setColor(Color.parseColor("#28A745")) // Hijau sukses
+                setColor(Color.parseColor(statusColor)) 
                 cornerRadius = 20 * density
             })
         }
@@ -278,6 +296,62 @@ class TicketActivity : AppCompatActivity() {
             finish()
         }
         mainContainer.addView(btnBackHome)
+
+        // Tombol Bayar Sekarang khusus PENDING
+        if (status.lowercase() == "pending") {
+            val btnPayNow = Button(this).apply {
+                text = "Bayar Sekarang"
+                textSize = 15f
+                isAllCaps = false
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.WHITE)
+                background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#FFC107"))
+                    cornerRadius = 10 * density
+                }
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    (48 * density).toInt()
+                ).apply {
+                    setMargins(0, (15 * density).toInt(), 0, 0)
+                }
+            }
+            btnPayNow.setOnClickListener {
+                val sessionManager = SessionManager(this@TicketActivity)
+                val tokenStr = "Bearer " + (sessionManager.fetchAuthToken() ?: "")
+                val req = PaymentRequest(
+                    bookingId = bookingId,
+                    totalPrice = totalAmount,
+                    paymentMethod = "bank_transfer"
+                )
+                lifecycleScope.launch {
+                    try {
+                        val res = ApiClient.instance.checkoutPayment(tokenStr, req)
+                        if (res.isSuccessful && res.body()?.success == true) {
+                            val paymentUrl = res.body()?.redirectUrl
+                            val intent = Intent(this@TicketActivity, PaymentActivity::class.java)
+                            intent.putExtra("PAYMENT_URL", paymentUrl)
+                            intent.putExtra("booking_id", orderId)
+                            intent.putExtra("departure_station", departureStation)
+                            intent.putExtra("arrival_station", arrivalStation)
+                            intent.putExtra("date_display", dateDisplay)
+                            intent.putExtra("departure_time", departureTime)
+                            intent.putExtra("arrival_time", arrivalTime)
+                            intent.putExtra("train_code", trainCode)
+                            intent.putExtra("train_class", trainClass)
+                            intent.putExtra("seat_number", seatNumber)
+                            intent.putExtra("passenger_name", passengerName)
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this@TicketActivity, "Gagal memproses pembayaran", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(this@TicketActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            mainContainer.addView(btnPayNow)
+        }
 
         scrollView.addView(mainContainer)
         setContentView(scrollView)

@@ -38,7 +38,7 @@ class SplashScreen : AppCompatActivity() {
         // 2. Membuat Komponen ImageView untuk Logo Woosh
         val logoImageView = ImageView(this).apply {
             // Mengambil gambar logo_woosh yang ada di folder drawable
-            setImageResource(R.drawable.logo)
+            setImageResource(R.drawable.logo11)
 
             // Mengatur ukuran logo di layar (contoh: lebar 250dp, tinggi 250dp)
             val density = resources.displayMetrics.density

@@ -75,4 +75,30 @@ interface ApiService {
         @Header("Authorization") token: String, // <- Wajib bawa token login
         @Path("order_id") orderId: String       // <- Mengisi {order_id} di URL
     ): Response<TicketDetailResponse>
+
+    @Headers("Accept: application/json")
+    @GET("tickets/history")
+    suspend fun getTicketHistory(
+        @Header("Authorization") token: String
+    ): Response<com.esa.ticketwoosh.data.model.TicketHistoryResponse>
+
+    @Headers("Accept: application/json")
+    @GET("tickets/history-filtered")
+    suspend fun getFilteredTicketHistory(
+        @Header("Authorization") token: String,
+        @Query("filter") filter: String
+    ): Response<com.esa.ticketwoosh.data.model.TicketHistoryResponse>
+
+    @Headers("Accept: application/json")
+    @GET("profile")
+    suspend fun getProfile(
+        @Header("Authorization") token: String
+    ): Response<com.esa.ticketwoosh.data.model.ProfileResponse>
+
+    @Headers("Accept: application/json")
+    @POST("profile/update")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: com.esa.ticketwoosh.data.model.ProfileUpdateRequest
+    ): Response<com.esa.ticketwoosh.data.model.ProfileResponse>
 }

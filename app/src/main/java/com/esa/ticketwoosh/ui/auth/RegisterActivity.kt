@@ -7,210 +7,208 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
-import android.view.ViewGroup.LayoutParams
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.esa.ticketwoosh.R
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import com.esa.ticketwoosh.R
 import com.esa.ticketwoosh.data.api.ApiClient
+import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. PENGAMAN: Paksa tema AppCompat agar tidak crash saat inflate view via kode
-
-
         super.onCreate(savedInstanceState)
 
         val density = resources.displayMetrics.density
-        val wooshRed = resources.getColor(R.color.woosh_red, theme)
+        val wooshRed = Color.parseColor("#ED1C24")
+        val textColorPrimary = Color.parseColor("#1C1C1E")
+        val textColorSecondary = Color.parseColor("#6C757D")
+        val inputBorderColor = Color.parseColor("#CED4DA")
 
-        // 2. ScrollView sebagai Root
+        // ScrollView sebagai Root
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
-            setBackgroundColor(Color.parseColor("#F4F6FA"))
-            layoutParams = LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.MATCH_PARENT
+            setBackgroundColor(Color.WHITE)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
-        // Layout Utama di dalam ScrollView
         val mainLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            val padding = (20 * density).toInt()
-            setPadding(padding, padding, padding, padding)
+            val padding = (24 * density).toInt()
+            setPadding(padding, (40 * density).toInt(), padding, padding)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
         // ==========================================
-        // HEADER: Judul Aplikasi Atas
+        // 1. Logo
         // ==========================================
-        val brandTextView = TextView(this).apply {
-            text = "WooshApp"
-            textSize = 28f
-            setTextColor(wooshRed)
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+        val logoImageView = ImageView(this).apply {
+            setImageResource(R.drawable.logo11merah)
+            layoutParams = LinearLayout.LayoutParams(
+                (150 * density).toInt(),
+                (150 * density).toInt()
+            ).apply {
+                bottomMargin = (16 * density).toInt()
+            }
+        }
+        mainLayout.addView(logoImageView)
+
+        // ==========================================
+        // 2. Titles
+        // ==========================================
+        val welcomeTitle = TextView(this).apply {
+            text = "Buat Akun Baru"
+            textSize = 22f
+            setTextColor(textColorPrimary)
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        mainLayout.addView(welcomeTitle)
+
+        val welcomeSubtitle = TextView(this).apply {
+            text = "Daftar untuk mulai perjalanan Anda bersama Woosh"
+            textSize = 14f
+            setTextColor(textColorSecondary)
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = (30 * density).toInt()
                 bottomMargin = (24 * density).toInt()
+                topMargin = (4 * density).toInt()
             }
         }
-        mainLayout.addView(brandTextView)
+        mainLayout.addView(welcomeSubtitle)
 
         // ==========================================
-        // FLOATING CARD (Kartu Putih Melengkung)
+        // 3. Form Input Helper
         // ==========================================
-        val cardLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val cardPadding = (24 * density).toInt()
-            setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
-
-            background = GradientDrawable().apply {
+        fun getInputBorder(): GradientDrawable {
+            return GradientDrawable().apply {
                 setColor(Color.WHITE)
-                cornerRadius = 28 * density // Lengkungan sudut kartu (28dp)
-            }
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = (24 * density).toInt()
+                setStroke((1 * density).toInt(), inputBorderColor)
+                cornerRadius = 10 * density
             }
         }
 
-        // 1. Judul Kartu
-        val titleCardTextView = TextView(this).apply {
-            text = "Create an Account?"
-            textSize = 22f
-            setTextColor(Color.parseColor("#1A1A1A"))
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = (24 * density).toInt()
-            }
-        }
-        cardLayout.addView(titleCardTextView)
-
-        // Fungsi pembantu membuat Input Field modern dengan label di atasnya
-        fun createInputField(hintText: String, inputTypeEnum: Int): EditText {
+        fun createInputField(labelText: String, hintText: String, inputTypeEnum: Int): EditText {
             val label = TextView(this@RegisterActivity).apply {
-                text = hintText.split(" ")[0] // Ambil kata pertama (Name / Email / Phone / Password)
-                setTextColor(Color.parseColor("#1A1A1A"))
-                textSize = 14f
-                typeface = Typeface.DEFAULT_BOLD
+                text = labelText
+                textSize = 13f
+                setTextColor(textColorSecondary)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = (6 * density).toInt() }
+                ).apply { bottomMargin = (8 * density).toInt() }
             }
-            cardLayout.addView(label)
+            mainLayout.addView(label)
 
             val editText = EditText(this@RegisterActivity).apply {
                 hint = hintText
-                setHintTextColor(Color.parseColor("#A0A5B0"))
-                setTextColor(Color.BLACK)
                 textSize = 15f
+                setTextColor(Color.BLACK)
                 setPadding((16 * density).toInt(), (14 * density).toInt(), (16 * density).toInt(), (14 * density).toInt())
                 inputType = inputTypeEnum
-
-                background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#F0F2F6")) // Warna abu-abu halus input
-                    cornerRadius = 14 * density
-                }
-
+                background = getInputBorder()
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { bottomMargin = (16 * density).toInt() }
             }
+            mainLayout.addView(editText)
             return editText
         }
 
-        // 2. Tambah Input Fields (Name, Email, Phone, Password)
-        val nameEditText = createInputField("Name Anda", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PERSON_NAME)
-        cardLayout.addView(nameEditText)
-
-        val emailEditText = createInputField("Email Anda", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
-        cardLayout.addView(emailEditText)
-
-        // BARU: Kolom input nomor HP/Telepon dengan keyboard khusus angka telepon
-        val phoneEditText = createInputField("Phone Anda", InputType.TYPE_CLASS_PHONE)
-        cardLayout.addView(phoneEditText)
-
-        val passwordEditText = createInputField("Password Anda", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
-        (passwordEditText.layoutParams as LinearLayout.LayoutParams).bottomMargin = (12 * density).toInt()
-        cardLayout.addView(passwordEditText)
-
+        val nameEditText = createInputField("Nama Lengkap", "Masukkan nama Anda", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PERSON_NAME)
+        val emailEditText = createInputField("Email", "contoh@email.com", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
+        val phoneEditText = createInputField("Nomor Ponsel", "081234567890", InputType.TYPE_CLASS_PHONE)
+        val passwordEditText = createInputField("Kata Sandi", "••••••••", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        
         // ==========================================
-        // CHECBOX: I agree to Terms of Service
+        // 4. Terms Checkbox
         // ==========================================
         val termsCheckbox = CheckBox(this).apply {
-            text = "I agree to the Terms of Service"
-            setTextColor(Color.parseColor("#8E8E93"))
+            text = "Saya setuju dengan Syarat & Ketentuan"
+            setTextColor(textColorSecondary)
+            buttonTintList = android.content.res.ColorStateList.valueOf(wooshRed)
             textSize = 13f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = (24 * density).toInt() }
         }
-        cardLayout.addView(termsCheckbox)
+        mainLayout.addView(termsCheckbox)
 
         // ==========================================
-        // TOMBOL REGISTER (Merah Woosh Bulat)
+        // 5. Register Button
         // ==========================================
         val registerButton = Button(this).apply {
-            text = "Create account"
+            text = "Daftar Sekarang →"
             setTextColor(Color.WHITE)
             textSize = 16f
             isAllCaps = false
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
-
             background = GradientDrawable().apply {
                 setColor(wooshRed)
-                cornerRadius = 16 * density
+                cornerRadius = 10 * density
             }
-
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (52 * density).toInt()
+                (54 * density).toInt()
             )
         }
-        cardLayout.addView(registerButton)
+        mainLayout.addView(registerButton)
 
-        mainLayout.addView(cardLayout)
+        // Spacer to push login text to bottom
+        val spacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        }
+        mainLayout.addView(spacer)
 
         // ==========================================
-        // FOOTER: Kembali ke Login jika sudah ada akun
+        // 6. Login Text
         // ==========================================
         val backToLoginTextView = TextView(this).apply {
-            text = "Sudah punya akun? Login di sini"
-            setTextColor(Color.parseColor("#4A80FF")) // Link biru soft
+            text = "Sudah punya akun? Masuk di sini"
+            setTextColor(textColorSecondary)
             textSize = 14f
             gravity = Gravity.CENTER
-            setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
+            setPadding(0, (20 * density).toInt(), 0, (20 * density).toInt())
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+                topMargin = (20 * density).toInt()
+            }
+            setOnClickListener {
+                val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
+                startActivity(intent)
+                finish()
+            }
         }
         mainLayout.addView(backToLoginTextView)
 
@@ -218,66 +216,50 @@ class RegisterActivity : AppCompatActivity() {
         setContentView(scrollView)
 
         // ==========================================
-        // LOGIKA AKSI TOMBOL
+        // LOGIC
         // ==========================================
         registerButton.setOnClickListener {
             val name = nameEditText.text.toString().trim()
             val email = emailEditText.text.toString().trim()
-            val phone = phoneEditText.text.toString().trim() // Ambil data nomor HP
+            val phone = phoneEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
 
-            // Validasi apakah ada field yang kosong termasuk nomor HP
             if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Semua data wajib diisi!", Toast.LENGTH_SHORT).show()
             } else if (!termsCheckbox.isChecked) {
-                Toast.makeText(this, "Anda harus menyetujui Terms of Service!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Anda harus menyetujui Syarat & Ketentuan!", Toast.LENGTH_SHORT).show()
             } else {
-                // MATIKAN tombol sementara agar user tidak klik berkali-kali saat loading
                 registerButton.isEnabled = false
                 registerButton.text = "Loading..."
 
-                // Jalankan proses background menggunakan Coroutine
                 lifecycleScope.launch {
                     try {
-                        // CATATAN: Pastikan key string kiri ("name", "email", dll)
-                        // sesuai persis dengan validasi di Controller Laravel Anda.
                         val requestBody = hashMapOf(
-                            "full_name" to name,      // Umumnya Laravel menggunakan "name" bukan "full_name" untuk user auth
+                            "full_name" to name,
                             "email" to email,
-                            "phone" to phone,    // Mengirim nomor HP ke Laravel
-                            "password_hash" to password // Umumnya Laravel menggunakan "password" bukan "password_hash"
+                            "phone" to phone,
+                            "password_hash" to password
                         )
 
                         val response = ApiClient.instance.registerUser(requestBody)
 
                         if (response.isSuccessful && response.body() != null) {
                             Toast.makeText(this@RegisterActivity, "Registrasi Berhasil! Silakan Login", Toast.LENGTH_LONG).show()
-                            // Lempar user kembali ke halaman Login
                             val intent = Intent(this@RegisterActivity, LoginActivity::class.java)
                             startActivity(intent)
                             finish()
                         } else {
-                            // Jika Laravel menolak (menampilkan JSON error asli dari server)
                             val errorJson = response.errorBody()?.string()
-                            Toast.makeText(this@RegisterActivity, "Laravel Reject: $errorJson", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@RegisterActivity, "Registrasi Gagal: Cek format atau email mungkin sudah terdaftar", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        // Jika koneksi gagal (misal server mati / IP salah)
                         Toast.makeText(this@RegisterActivity, "Error Koneksi: ${e.message}", Toast.LENGTH_LONG).show()
                     } finally {
-                        // Hidupkan tombol kembali
                         registerButton.isEnabled = true
-                        registerButton.text = "Create account"
+                        registerButton.text = "Daftar Sekarang →"
                     }
                 }
             }
-        }
-
-        // Klik teks untuk kembali ke halaman login
-        backToLoginTextView.setOnClickListener {
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-            finish() // Menutup activity register agar tidak menumpuk di stack back
         }
     }
 }

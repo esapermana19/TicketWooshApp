@@ -1,6 +1,5 @@
 package com.esa.ticketwoosh.ui.auth
 
-import android.R.attr.textAllCaps
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -8,312 +7,257 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
-import android.view.View
+import android.view.View // Add this import
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RelativeLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.esa.ticketwoosh.R
-import android.view.ViewGroup.LayoutParams
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+import com.esa.ticketwoosh.R
 import com.esa.ticketwoosh.data.api.ApiClient
 import com.esa.ticketwoosh.ui.booking.BookingActivity
 import com.esa.ticketwoosh.utils.SessionManager
+import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. PENGAMAN: Paksa tema AppCompat agar tidak crash/mental saat membuat View lewat kode
-
         super.onCreate(savedInstanceState)
 
         val density = resources.displayMetrics.density
-        val wooshRed = resources.getColor(R.color.woosh_red, theme)
+        val wooshRed = Color.parseColor("#ED1C24")
+        val textColorPrimary = Color.parseColor("#1C1C1E")
+        val textColorSecondary = Color.parseColor("#6C757D")
+        val inputBorderColor = Color.parseColor("#CED4DA")
 
-        // 2. ScrollView sebagai Root agar layout tidak kepotong di HP layar kecil
+        // ScrollView sebagai Root
         val scrollView = ScrollView(this).apply {
             isFillViewport = true
-            setBackgroundColor(Color.parseColor("#F4F6FA"))
-            // Perbaikan: Gunakan ViewGroup.LayoutParams (diimpor sebagai LayoutParams)
-            layoutParams = LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.MATCH_PARENT
+            setBackgroundColor(Color.WHITE)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
-        // Layout Utama di dalam ScrollView
         val mainLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            val padding = (20 * density).toInt()
-            setPadding(padding, padding, padding, padding)
+            val padding = (24 * density).toInt()
+            setPadding(padding, (60 * density).toInt(), padding, padding)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
         // ==========================================
-        // HEADER: Judul Aplikasi Atas (SmartNest Style)
+        // 1. Logo
         // ==========================================
-        val brandTextView = TextView(this).apply {
-            text = "WooshApp"
-            textSize = 28f
-            setTextColor(wooshRed) // Menggunakan warna merah khas Anda
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            gravity = Gravity.CENTER
+        val logoImageView = ImageView(this).apply {
+            setImageResource(R.drawable.logo11merah)
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = (40 * density).toInt()
-                bottomMargin = (32 * density).toInt()
-            }
-        }
-        mainLayout.addView(brandTextView)
-
-        // ==========================================
-        // FLOATING CARD (Kartu Putih Melengkung Tengah)
-        // ==========================================
-        val cardLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val cardPadding = (24 * density).toInt()
-            setPadding(cardPadding, cardPadding, cardPadding, cardPadding)
-
-            // Membuat background putih melengkung tajam (Radius 28dp seperti di gambar)
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadius = 28 * density
-            }
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                (150 * density).toInt(),
+                (150 * density).toInt()
             ).apply {
                 bottomMargin = (24 * density).toInt()
             }
         }
+        mainLayout.addView(logoImageView)
 
-        // 1. Judul di dalam Kartu
-        val welcomeTextView = TextView(this).apply {
-            text = "Welcome to\nWoosh login now!"
+        // ==========================================
+        // 2. Titles
+        // ==========================================
+        val welcomeTitle = TextView(this).apply {
+            text = "Selamat Datang Kembali"
             textSize = 22f
-            setTextColor(Color.parseColor("#1A1A1A"))
+            setTextColor(textColorPrimary)
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
             gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = (28 * density).toInt()
-            }
-        }
-        cardLayout.addView(welcomeTextView)
-
-        // Fungsi pembantu untuk membuat Desain Form Input abu-abu melengkung halus
-        fun createModernInputField(hintText: String, isPassword: Boolean): EditText {
-            // Label di atas kolom input
-            val label = TextView(this@LoginActivity).apply {
-                text = hintText.split(" ")[0] // Ambil kata pertama (Email / Password)
-                setTextColor(Color.parseColor("#1A1A1A"))
-                textSize = 14f
-                typeface = Typeface.DEFAULT_BOLD
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = (6 * density).toInt() }
-            }
-            cardLayout.addView(label)
-
-            // Kolom Inputnya
-            val editText = EditText(this@LoginActivity).apply {
-                hint = hintText
-                setHintTextColor(Color.parseColor("#A0A5B0"))
-                setTextColor(Color.BLACK)
-                textSize = 15f
-                setPadding((16 * density).toInt(), (14 * density).toInt(), (16 * density).toInt(), (14 * density).toInt())
-                inputType = if (isPassword) {
-                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                } else {
-                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-                }
-
-                // Background abu-abu rounded (seperti di gambar contoh)
-                background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#F0F2F6"))
-                    cornerRadius = 14 * density
-                }
-
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = (16 * density).toInt() }
-            }
-            return editText
-        }
-
-        // 2. Tambah Input Email & Password ke dalam Kartu
-        val emailEditText = createModernInputField("Email Anda", false)
-        cardLayout.addView(emailEditText)
-
-        val passwordEditText = createModernInputField("Password Anda", true)
-        // Sesuaikan margin bawah password agar pas dengan baris opsi di bawahnya
-        (passwordEditText.layoutParams as LinearLayout.LayoutParams).bottomMargin = (12 * density).toInt()
-        cardLayout.addView(passwordEditText)
-
-        // ==========================================
-        // BARIS OPSI: Remember Me & Forgot Password
-        // ==========================================
-        val optionsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = (24 * density).toInt() }
-        }
-
-        val rememberMeCheckbox = CheckBox(this).apply {
-            text = "Remember me"
-            setTextColor(Color.parseColor("#8E8E93"))
-            textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-
-        val forgotPasswordTextView = TextView(this).apply {
-            text = "Forget password?"
-            setTextColor(Color.parseColor("#4A80FF")) // Warna biru link soft sesuai gambar asli
-            textSize = 13f
-            gravity = Gravity.END
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        optionsRow.addView(rememberMeCheckbox)
-        optionsRow.addView(forgotPasswordTextView)
-        cardLayout.addView(optionsRow)
+        mainLayout.addView(welcomeTitle)
 
-        // ==========================================
-        // TOMBOL LOGIN UTAMA (Merah Woosh Bulat)
-        // ==========================================
-        val loginButton = Button(this).apply {
-            text = "Login"
-            setTextColor(Color.WHITE)
-            textSize = 16f
-            isAllCaps = false
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
-
-            // Tombol Melengkung Sempurna berwarna Merah
-            background = GradientDrawable().apply {
-                setColor(wooshRed)
-                cornerRadius = 16 * density
+        val welcomeSubtitle = TextView(this).apply {
+            text = "Masuk untuk memesan tiket perjalanan Anda"
+            textSize = 14f
+            setTextColor(textColorSecondary)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = (32 * density).toInt()
+                topMargin = (4 * density).toInt()
             }
+        }
+        mainLayout.addView(welcomeSubtitle)
 
+        // ==========================================
+        // 3. Form Input Helper
+        // ==========================================
+        fun getInputBorder(): GradientDrawable {
+            return GradientDrawable().apply {
+                setColor(Color.WHITE)
+                setStroke((1 * density).toInt(), inputBorderColor)
+                cornerRadius = 10 * density
+            }
+        }
+
+        // Email Section
+        val emailLabel = TextView(this).apply {
+            text = "Email atau Nomor Ponsel"
+            textSize = 13f
+            setTextColor(textColorSecondary)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (52 * density).toInt()
-            )
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = (8 * density).toInt() }
         }
-        cardLayout.addView(loginButton)
+        mainLayout.addView(emailLabel)
 
-        // Masukkan seluruh Kartu ke dalam Layout Utama
-        mainLayout.addView(cardLayout)
-
-        // ==========================================
-        // BOTTOM: Or Sign In With & Social Buttons
-        // ==========================================
-        val dividerTextView = TextView(this).apply {
-            text = "Or Sign in with"
-            setTextColor(Color.parseColor("#8E8E93"))
-            textSize = 13f
-            gravity = Gravity.CENTER
+        val emailEditText = EditText(this).apply {
+            hint = "contoh@email.com"
+            textSize = 15f
+            setTextColor(Color.BLACK)
+            setPadding((16 * density).toInt(), (14 * density).toInt(), (16 * density).toInt(), (14 * density).toInt())
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            background = getInputBorder()
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = (20 * density).toInt() }
         }
-        mainLayout.addView(dividerTextView)
+        mainLayout.addView(emailEditText)
 
-        // Container Tombol Sosial Media (Horizontal)
-        val socialLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
+        // Password Section Layout (For Label and Forgot Password)
+        val passwordLabelLayout = RelativeLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = (8 * density).toInt() }
+        }
+
+        val passwordLabel = TextView(this).apply {
+            text = "Kata Sandi"
+            textSize = 13f
+            setTextColor(textColorSecondary)
+            layoutParams = RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+            ).apply { addRule(RelativeLayout.ALIGN_PARENT_LEFT) }
+        }
+        passwordLabelLayout.addView(passwordLabel)
+
+        val forgotPassword = TextView(this).apply {
+            text = "Lupa Sandi?"
+            textSize = 13f
+            setTextColor(wooshRed)
+            typeface = Typeface.DEFAULT_BOLD
+            layoutParams = RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+            ).apply { addRule(RelativeLayout.ALIGN_PARENT_RIGHT) }
+        }
+        passwordLabelLayout.addView(forgotPassword)
+        mainLayout.addView(passwordLabelLayout)
+
+        val passwordEditText = EditText(this).apply {
+            hint = "••••••••"
+            textSize = 15f
+            setTextColor(Color.BLACK)
+            setPadding((16 * density).toInt(), (14 * density).toInt(), (16 * density).toInt(), (14 * density).toInt())
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            background = getInputBorder()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = (16 * density).toInt() }
+        }
+        mainLayout.addView(passwordEditText)
+
+        // ==========================================
+        // 4. Remember Me
+        // ==========================================
+        val rememberMeCheckbox = CheckBox(this).apply {
+            text = "Ingat saya di perangkat ini"
+            setTextColor(textColorSecondary)
+            buttonTintList = android.content.res.ColorStateList.valueOf(wooshRed)
+            textSize = 13f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = (32 * density).toInt() }
+        }
+        mainLayout.addView(rememberMeCheckbox)
+
+        // ==========================================
+        // 5. Login Button
+        // ==========================================
+        val loginButton = Button(this).apply {
+            text = "Masuk Sekarang →"
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            isAllCaps = false
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            background = GradientDrawable().apply {
+                setColor(wooshRed)
+                cornerRadius = 10 * density
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (54 * density).toInt()
             )
         }
+        mainLayout.addView(loginButton)
 
-        // Fungsi pembantu membuat tombol buatan lingkaran sosial media
-        fun createSocialButton(symbol: String, brandColor: String): TextView {
-            return TextView(this@LoginActivity).apply {
-                text = symbol
-                textSize = 18f
-                setTextColor(Color.parseColor(brandColor))
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-
-                background = GradientDrawable().apply {
-                    setColor(Color.WHITE)
-                    cornerRadius = 14 * density // Bentuk kotak melengkung manis (squircle) seperti di gambar
-                    setStroke((1 * density).toInt(), Color.parseColor("#E5E5EA")) // Border tipis halus
-                }
-
-                layoutParams = LinearLayout.LayoutParams((54 * density).toInt(), (50 * density).toInt()).apply {
-                    leftMargin = (10 * density).toInt()
-                    rightMargin = (10 * density).toInt()
-                }
-            }
+        // Spacer to push register text to bottom
+        val spacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
         }
-
-        // Menambahkan ikon Sosial Media buatan teks (Bisa diganti foto ImageView nanti jika sudah punya asetnya)
-        val fbButton = createSocialButton("f", "#3B5998")
-        val googleButton = createSocialButton("G", "#DB4437")
-        val appleButton = createSocialButton("", "#000000")
-
-        socialLayout.addView(fbButton)
-        socialLayout.addView(googleButton)
-        socialLayout.addView(appleButton)
-        mainLayout.addView(socialLayout)
+        mainLayout.addView(spacer)
 
         // ==========================================
-        // PERBAIKAN: Teks Register Pindahkan Ke Sini
+        // 6. Register Text
         // ==========================================
         val registerTextView = TextView(this).apply {
-            text = "Belum punya akun? Daftar di sini" // 1. Perbaikan teks yang terbalik
-            setTextColor(Color.parseColor("#4A80FF"))
+            text = "Belum punya akun? Daftar Gratis"
+            setTextColor(textColorSecondary)
             textSize = 14f
             gravity = Gravity.CENTER
-            setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
+            setPadding(0, (20 * density).toInt(), 0, (20 * density).toInt())
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                topMargin = (24 * density).toInt() // Beri sedikit jarak di bawah tombol social media
+                topMargin = (40 * density).toInt()
+            }
+            setOnClickListener {
+                val intent = Intent(this@LoginActivity, RegisterActivity::class.java)
+                startActivity(intent)
             }
         }
-
-        // 2. KUNCI PERBAIKAN: Masukkan teks ke dalam layout utama agar muncul di layar
         mainLayout.addView(registerTextView)
 
-        // Logika Klik Teks Register
-        registerTextView.setOnClickListener {
-            val intent = Intent(this, RegisterActivity::class.java)
-            startActivity(intent)
-        }
-
-        // Baru setelah semua komponen masuk ke mainLayout, masukkan ke scrollView
         scrollView.addView(mainLayout)
         setContentView(scrollView)
 
         // ==========================================
-        // LOGIKA AKSI KLIK TOMBOL
+        // LOGIC
         // ==========================================
         val sessionManager = SessionManager(this)
 
@@ -339,31 +283,23 @@ class LoginActivity : AppCompatActivity() {
                         if (response.isSuccessful && response.body() != null) {
                             val loginData = response.body()!!
 
-                            // 1. Simpan Token ke SharedPreferences
                             loginData.token?.let { token ->
                                 sessionManager.saveAuthToken(token)
                             }
 
-                            Toast.makeText(this@LoginActivity, "Login Sukses! Selamat datang ${loginData.user?.fullName}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@LoginActivity, "Login Sukses!", Toast.LENGTH_LONG).show()
 
-                            // 2. PINDAH KE DASHBOARD / HALAMAN UTAMA
-                            // Sementara kita buat toast dulu, nanti kita ganti ke DashboardActivity Anda
                             val intent = Intent(this@LoginActivity, BookingActivity::class.java)
                             startActivity(intent)
-
-                            // Menutup LoginActivity agar user tidak bisa kembali ke halaman login dengan tombol 'Back'
                             finish()
-
                         } else {
-                            val errorJson = response.errorBody()?.string()
-                            Toast.makeText(this@LoginActivity, "Laravel Reject: $errorJson", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@LoginActivity, "Login gagal, periksa email dan password.", Toast.LENGTH_LONG).show()
                         }
                     } catch (e: Exception) {
-                        // Menampilkan pesan error asli dari Android/Retrofit
-                        Toast.makeText(this@LoginActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@LoginActivity, "Error: Koneksi server gagal", Toast.LENGTH_LONG).show()
                     } finally {
                         loginButton.isEnabled = true
-                        loginButton.text = "Login"
+                        loginButton.text = "Masuk Sekarang →"
                     }
                 }
             }

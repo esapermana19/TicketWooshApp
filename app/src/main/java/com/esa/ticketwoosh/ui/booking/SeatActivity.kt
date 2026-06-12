@@ -661,11 +661,40 @@ class SeatActivity : AppCompatActivity() {
                 }
                 val formattedToken = if (token.startsWith("Bearer ")) token else "Bearer $token"
 
-                // 2. Panggil API Laravel yang terhubung ke Midtrans Snap
-                // Test sesuai format yang diminta: {"booking_id": 1, "total_price": 100000, "payment_method": "bank_transfer"}
+                // 2. Buat data booking dan penumpang terlebih dahulu ke database
+                val checkoutPassengers = mutableListOf<CheckoutPassenger>()
+                for ((index, seat) in selectedSeats.withIndex()) {
+                    val pName = if (index < passengerNames.size) passengerNames[index] else "Penumpang ${index + 1}"
+                    val pId = if (index < passengerIds.size) passengerIds[index] else "ID-${index + 1}"
+                    checkoutPassengers.add(
+                        CheckoutPassenger(
+                            fullName = pName,
+                            idNumber = pId,
+                            seatId = seat.seatId
+                        )
+                    )
+                }
+
+                val checkoutRequest = CheckoutRequest(
+                    scheduleId = scheduleId,
+                    paymentMethod = "bank_transfer",
+                    passengers = checkoutPassengers
+                )
+
+                val checkoutResponse = ApiClient.instance.checkout(formattedToken, checkoutRequest)
+                if (!checkoutResponse.isSuccessful || checkoutResponse.body() == null) {
+                    loadingOverlay.visibility = View.GONE
+                    val errorBody = checkoutResponse.errorBody()?.string() ?: "Gagal menyimpan data booking."
+                    Toast.makeText(this@SeatActivity, "Gagal membuat booking: $errorBody", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                
+                val realBookingId = checkoutResponse.body()!!.bookingId ?: 1
+
+                // 3. Panggil API Laravel yang terhubung ke Midtrans Snap dengan data ASLI
                 val paymentRequest = com.esa.ticketwoosh.data.model.PaymentRequest(
-                    bookingId = 1,
-                    totalPrice = 100000,
+                    bookingId = realBookingId,
+                    totalPrice = hitungTotalHarga,
                     paymentMethod = "bank_transfer"
                 )
                 

@@ -10,8 +10,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
+import androidx.cardview.widget.CardView // Add this import
 import com.esa.ticketwoosh.R
 import com.esa.ticketwoosh.data.api.ApiClient
 import kotlinx.coroutines.launch
@@ -20,6 +25,10 @@ import java.util.Calendar
 import java.util.Locale
 
 class BookingActivity : AppCompatActivity() {
+
+    private lateinit var viewPager: ViewPager2
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var autoScrollRunnable: Runnable
 
     // State untuk Stasiun (Data dari Database Laravel)
     private var stationList = ArrayList<String>() // Menampung nama-nama stasiun dari DB
@@ -58,46 +67,7 @@ class BookingActivity : AppCompatActivity() {
         }
 
         // --- Bottom Navigation ---
-        val bottomNav = LinearLayout(this).apply {
-            id = View.generateViewId()
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.WHITE)
-            elevation = 16f * density
-            layoutParams = RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                (60 * density).toInt()
-            ).apply {
-                addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
-            }
-        }
-        
-        fun createBottomNavItem(iconText: String, label: String, isActive: Boolean): LinearLayout {
-            return LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-                
-                val icon = TextView(this@BookingActivity).apply {
-                    text = iconText
-                    textSize = 20f
-                    gravity = Gravity.CENTER
-                    setTextColor(if (isActive) wooshRed else Color.parseColor("#9CA3AF"))
-                }
-                val text = TextView(this@BookingActivity).apply {
-                    text = label
-                    textSize = 10f
-                    gravity = Gravity.CENTER
-                    setTextColor(if (isActive) wooshRed else Color.parseColor("#9CA3AF"))
-                }
-                addView(icon)
-                addView(text)
-            }
-        }
-        
-        bottomNav.addView(createBottomNavItem("🏠", "Home", true))
-        bottomNav.addView(createBottomNavItem("🎫", "My Tickets", false))
-        bottomNav.addView(createBottomNavItem("👤", "Profile", false))
-        rootLayout.addView(bottomNav)
+        val bottomNavId = com.esa.ticketwoosh.utils.BottomNavigationUtil.setupBottomNav(this, rootLayout, 0)
 
         // --- ScrollView ---
         val scrollView = ScrollView(this).apply {
@@ -106,7 +76,7 @@ class BookingActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             ).apply {
-                addRule(RelativeLayout.ABOVE, bottomNav.id)
+                addRule(RelativeLayout.ABOVE, bottomNavId)
             }
         }
         
@@ -151,6 +121,63 @@ class BookingActivity : AppCompatActivity() {
         topHeader.addView(whooshTitle)
         topHeader.addView(subtitle)
         scrollContent.addView(topHeader)
+
+        // --- Banner Carousel ---
+        val bannerImages = listOf(
+            R.drawable.banner1,
+            R.drawable.banner2,
+            R.drawable.banner6
+        )
+
+        val bannerContainer = RelativeLayout(this).apply {
+            id = View.generateViewId()
+            layoutParams = RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (180 * density).toInt()
+            ).apply {
+                addRule(RelativeLayout.BELOW, topHeader.id)
+                topMargin = (-60 * density).toInt() // Overlap sedikit dengan header
+                leftMargin = (24 * density).toInt()
+                rightMargin = (24 * density).toInt()
+            }
+        }
+
+        viewPager = ViewPager2(this).apply {
+            layoutParams = RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            adapter = BannerAdapter(bannerImages)
+            clipToPadding = false
+            clipChildren = false
+            offscreenPageLimit = 3
+        }
+
+        // Rounded corners untuk ViewPager container
+        val cardBanner = CardView(this).apply {
+            radius = 16f * density
+            cardElevation = 4f * density
+            layoutParams = RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            addView(viewPager)
+        }
+        
+        bannerContainer.addView(cardBanner)
+        scrollContent.addView(bannerContainer)
+
+        autoScrollRunnable = object : Runnable {
+            override fun run() {
+                val itemCount = viewPager.adapter?.itemCount ?: 0
+                if (itemCount > 0) {
+                    val nextItem = (viewPager.currentItem + 1) % itemCount
+                    viewPager.setCurrentItem(nextItem, true)
+                }
+                handler.postDelayed(this, 3000) // Geser tiap 3 detik
+            }
+        }
+        handler.postDelayed(autoScrollRunnable, 3000)
         
         val mainContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -159,8 +186,8 @@ class BookingActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                addRule(RelativeLayout.BELOW, topHeader.id)
-                topMargin = (-60 * density).toInt() // Overlap dengan header
+                addRule(RelativeLayout.BELOW, bannerContainer.id)
+                topMargin = (24 * density).toInt() 
             }
         }
         
@@ -421,7 +448,7 @@ class BookingActivity : AppCompatActivity() {
         
         // 4. Search Trains Button
         val searchButton = Button(this).apply {
-            text = "🚍 Search Trains"
+            text = "Search Trains"
             isAllCaps = false
             setTextColor(Color.WHITE)
             textSize = 16f
@@ -459,81 +486,6 @@ class BookingActivity : AppCompatActivity() {
         }
         routeCardContainer.addView(searchButton)
         mainContent.addView(routeCardContainer)
-
-        // --- Latest Promotions ---
-        val promotionsTitle = TextView(this).apply {
-            text = "Latest Promotions"
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#003366"))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = (12 * density).toInt() }
-        }
-        mainContent.addView(promotionsTitle)
-
-        val promotionCard = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.BLACK)
-                cornerRadius = 16f * density
-            }
-            setPadding((20 * density).toInt(), (20 * density).toInt(), (20 * density).toInt(), (20 * density).toInt())
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = (24 * density).toInt() }
-        }
-        val promoTextLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        val promoSpecialOffer = TextView(this).apply {
-            text = "SPECIAL OFFER"
-            textSize = 10f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#9CA3AF"))
-        }
-        val promoGetOff = TextView(this).apply {
-            text = "Get 20% Off"
-            textSize = 22f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { 
-                topMargin = (4 * density).toInt()
-                bottomMargin = (4 * density).toInt()
-            }
-        }
-        val promoForWeekend = TextView(this).apply {
-            text = "For weekend departures"
-            textSize = 12f
-            setTextColor(Color.WHITE)
-        }
-        promoTextLayout.addView(promoSpecialOffer)
-        promoTextLayout.addView(promoGetOff)
-        promoTextLayout.addView(promoForWeekend)
-
-        val promoWooshIcon = TextView(this).apply {
-            text = "W!"
-            textSize = 28f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(wooshRed)
-                shape = GradientDrawable.OVAL
-            }
-            layoutParams = LinearLayout.LayoutParams((60 * density).toInt(), (60 * density).toInt())
-        }
-        promotionCard.addView(promoTextLayout)
-        promotionCard.addView(promoWooshIcon)
-        mainContent.addView(promotionCard)
-
         scrollContent.addView(mainContent)
         scrollView.addView(scrollContent)
         rootLayout.addView(scrollView)
@@ -570,7 +522,7 @@ class BookingActivity : AppCompatActivity() {
                 originStationTextView.text = selectedOrigin
             } else {
                 selectedDestination = chosenStation
-                destinationStationTextView.text = selectedDestination
+                destinationStationTextView.text = chosenStation
             }
         }
         builder.show()
@@ -634,5 +586,31 @@ class BookingActivity : AppCompatActivity() {
     private fun updateDateText() {
         val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale("en", "US")) // To match "Wed, 18 Oct 2023"
         departureDateTextView.text = dateFormat.format(selectedDate.time)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(autoScrollRunnable)
+    }
+
+    inner class BannerAdapter(private val images: List<Int>) : RecyclerView.Adapter<BannerAdapter.BannerViewHolder>() {
+        inner class BannerViewHolder(val imageView: ImageView) : RecyclerView.ViewHolder(imageView)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BannerViewHolder {
+            val imageView = ImageView(parent.context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
+            return BannerViewHolder(imageView)
+        }
+
+        override fun onBindViewHolder(holder: BannerViewHolder, position: Int) {
+            holder.imageView.setImageResource(images[position])
+        }
+
+        override fun getItemCount(): Int = images.size
     }
 }

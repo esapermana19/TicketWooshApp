@@ -34,6 +34,7 @@ data class CheckoutPassenger(
 
 data class CheckoutResponse(
     @SerializedName("message") val message: String,
+    @SerializedName("booking_id") val bookingId: Int?,
     @SerializedName("booking_code") val bookingCode: String?,
     @SerializedName("total_bayar") val totalBayar: Double?,
     @SerializedName("metode") val metode: String?,
