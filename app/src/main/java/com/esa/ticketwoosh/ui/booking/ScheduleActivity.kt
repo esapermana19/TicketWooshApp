@@ -230,17 +230,28 @@ class ScheduleActivity : AppCompatActivity() {
         fetchSchedules()
     }
 
+    private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+    }
+
     private fun rebuildDateStrip() {
         dateStripLayout.removeAllViews()
         val density = resources.displayMetrics.density
 
-        // Kita tampilkan 5 tanggal: H-2, H-1, H, H+1, H+2
-        val dateIterator = currentDate.clone() as Calendar
-        dateIterator.add(Calendar.DAY_OF_YEAR, -2)
+        // Kita tampilkan 30 tanggal mulai dari HARI INI agar user bisa booking jauh-jauh hari
+        val dateIterator = Calendar.getInstance()
 
-        for (i in 0 until 5) {
+        // Pastikan currentDate tidak berada di masa lalu
+        if (currentDate.before(dateIterator) && !isSameDay(currentDate, dateIterator)) {
+            currentDate = Calendar.getInstance()
+            dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(currentDate.time)
+            dateDisplay = SimpleDateFormat("EEE, dd MMM yyyy", Locale.US).format(currentDate.time)
+        }
+
+        for (i in 0 until 30) {
             val itemDate = dateIterator.clone() as Calendar
-            val isActive = i == 2 // Hari ke-3 (tengah) adalah tanggal aktif
+            val isActive = isSameDay(currentDate, itemDate)
 
             val dayName = SimpleDateFormat("dd MMM", Locale.US).format(itemDate.time)
 
@@ -307,14 +318,14 @@ class ScheduleActivity : AppCompatActivity() {
                         populateScheduleCards(scheduleList)
                     }
                 } else {
-                    // Jika API mengembalikan 404 (tidak ditemukan), kita buat backup data untuk simulasi
-                    generateBackupSchedules()
+                    // Jika API mengembalikan 404 atau error lainnya
+                    showEmptyState()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 progressBar.visibility = View.GONE
-                // Jika offline / server mati, gunakan backup data
-                generateBackupSchedules()
+                // Jika offline / server mati, tampilkan state kosong
+                showEmptyState()
             }
         }
     }
@@ -618,76 +629,7 @@ class ScheduleActivity : AppCompatActivity() {
         }
     }
 
-    private fun generateBackupSchedules() {
-        val cleanOrigin = originName.substringBefore(" (")
-        val cleanDest = destinationName.substringBefore(" (")
-        
-        val originCode = when (cleanOrigin) {
-            "Halim" -> "HLM"
-            "Karawang" -> "KWG"
-            "Padalarang" -> "PDL"
-            "Tegalluar" -> "TGL"
-            else -> "HLM"
-        }
-        val destCode = when (cleanDest) {
-            "Halim" -> "HLM"
-            "Karawang" -> "KWG"
-            "Padalarang" -> "PDL"
-            "Tegalluar" -> "TGL"
-            else -> "PDL"
-        }
-
-        // Backup: available_seats diisi secara eksplisit agar tidak tampil dummy
-        val backupList = listOf(
-            ScheduleItem(
-                scheduleId = 1,
-                trainId = 1,
-                departureStation = StationItem(originId, cleanOrigin, cleanOrigin, originCode),
-                arrivalStation = StationItem(destinationId, cleanDest, cleanDest, destCode),
-                departureTime = "$dateStr 08:45:00",
-                arrivalTime = "$dateStr 09:30:00",
-                price = "250000.00",
-                train = TrainItem(1, "Woosh Train 1", "G7701", 600),
-                availableSeats = 0   // Sold Out
-            ),
-            ScheduleItem(
-                scheduleId = 2,
-                trainId = 2,
-                departureStation = StationItem(originId, cleanOrigin, cleanOrigin, originCode),
-                arrivalStation = StationItem(destinationId, cleanDest, cleanDest, destCode),
-                departureTime = "$dateStr 09:45:00",
-                arrivalTime = "$dateStr 10:30:00",
-                price = "300000.00",
-                train = TrainItem(2, "Woosh Train 2", "G7703", 600),
-                availableSeats = 12
-            ),
-            ScheduleItem(
-                scheduleId = 3,
-                trainId = 3,
-                departureStation = StationItem(originId, cleanOrigin, cleanOrigin, originCode),
-                arrivalStation = StationItem(destinationId, cleanDest, cleanDest, destCode),
-                departureTime = "$dateStr 10:45:00",
-                arrivalTime = "$dateStr 11:30:00",
-                price = "600000.00",
-                train = TrainItem(3, "Woosh Train 3", "G7705", 600),
-                availableSeats = 5
-            ),
-            ScheduleItem(
-                scheduleId = 4,
-                trainId = 4,
-                departureStation = StationItem(originId, cleanOrigin, cleanOrigin, originCode),
-                arrivalStation = StationItem(destinationId, cleanDest, cleanDest, destCode),
-                departureTime = "$dateStr 13:00:00",
-                arrivalTime = "$dateStr 13:45:00",
-                price = "250000.00",
-                train = TrainItem(4, "Woosh Train 4", "G7707", 600),
-                availableSeats = 2
-            )
-        )
-
-        progressBar.visibility = View.GONE
-        populateScheduleCards(backupList)
-    }
+    // Fungsi backup data dihapus agar tidak memunculkan data dummy
 
     private fun formatPrice(priceStr: String): String {
         val amount = priceStr.toDoubleOrNull() ?: 0.0

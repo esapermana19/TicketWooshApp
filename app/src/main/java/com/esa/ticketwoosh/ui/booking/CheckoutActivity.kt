@@ -383,15 +383,49 @@ class CheckoutActivity : AppCompatActivity() {
             setPadding((16 * d).toInt(), (12 * d).toInt(), (16 * d).toInt(), (20 * d).toInt())
         }
 
+        // Add Total Price Row
+        val totalRow = RelativeLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = (12 * d).toInt()
+            }
+        }
+        val totalLabel = TextView(this).apply {
+            text = "Total Payment"
+            textSize = 14f
+            setTextColor(Color.parseColor("#AAAAAA"))
+            layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_START)
+                addRule(RelativeLayout.CENTER_VERTICAL)
+            }
+        }
+        val totalPriceTxt = TextView(this).apply {
+            val total = (price.toDoubleOrNull() ?: 0.0) * passengerCount
+            text = "Rp " + java.text.NumberFormat.getNumberInstance(java.util.Locale("id", "ID")).format(total)
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            layoutParams = RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                addRule(RelativeLayout.ALIGN_PARENT_END)
+                addRule(RelativeLayout.CENTER_VERTICAL)
+            }
+        }
+        totalRow.addView(totalLabel)
+        totalRow.addView(totalPriceTxt)
+        container.addView(totalRow)
+
         val btn = TextView(this).apply {
             text = "Select Seat"
             textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorWhite)
             gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(wooshRed)
+                cornerRadius = 24f * d // Rounded corners
+            }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                (52 * d).toInt()
+                (48 * d).toInt()
             )
             setOnClickListener { onSelectSeatClicked() }
         }
@@ -423,11 +457,18 @@ class CheckoutActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 (52 * d).toInt()
             )
-            adapter = ArrayAdapter(
-                this@CheckoutActivity,
-                android.R.layout.simple_spinner_item,
-                options
-            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            adapter = object : ArrayAdapter<String>(this@CheckoutActivity, android.R.layout.simple_spinner_item, options) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent) as TextView
+                    view.setTextColor(colorTextPrimary)
+                    return view
+                }
+                override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getDropDownView(position, convertView, parent) as TextView
+                    view.setTextColor(colorTextPrimary)
+                    return view
+                }
+            }.also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         }
         wrapper.addView(spinner)
         return Pair(wrapper, spinner)

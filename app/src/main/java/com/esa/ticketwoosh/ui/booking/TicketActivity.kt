@@ -16,6 +16,9 @@ import com.esa.ticketwoosh.data.api.ApiClient
 import com.esa.ticketwoosh.data.model.PaymentRequest
 import com.esa.ticketwoosh.utils.SessionManager
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 
 class TicketActivity : AppCompatActivity() {
 
@@ -241,21 +244,27 @@ class TicketActivity : AppCompatActivity() {
             )
         }
 
-        // Placeholder Kotak Barcode / QR Code
+        // Kotak QR Code
         val qrCodeBox = ImageView(this).apply {
-            // Sementara menggunakan placeholder background abu-abu berpola kotak QR
-            setBackgroundDrawable(GradientDrawable().apply {
-                setColor(Color.parseColor("#E5E5EA"))
-                setStroke((1 * density).toInt(), Color.parseColor("#C7C7CC"))
-                cornerRadius = 8 * density
-            })
-            // Kita set gambarnya menggunakan icon bawaan Android studio sebagai penanda
-            setImageResource(android.R.drawable.ic_menu_crop)
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-            layoutParams = LinearLayout.LayoutParams(
-                (160 * density).toInt(),
-                (160 * density).toInt()
-            ).apply {
+            val qrSize = (160 * density).toInt()
+            val qrBitmap = generateQRCode(orderId, qrSize)
+
+            if (qrBitmap != null) {
+                setImageBitmap(qrBitmap)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                setBackgroundColor(Color.WHITE)
+            } else {
+                // Fallback jika gagal generate
+                setBackgroundDrawable(GradientDrawable().apply {
+                    setColor(Color.parseColor("#E5E5EA"))
+                    setStroke((1 * density).toInt(), Color.parseColor("#C7C7CC"))
+                    cornerRadius = 8 * density
+                })
+                setImageResource(android.R.drawable.ic_menu_crop)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+            }
+
+            layoutParams = LinearLayout.LayoutParams(qrSize, qrSize).apply {
                 setMargins(0, 0, 0, (10 * density).toInt())
             }
         }
@@ -423,6 +432,25 @@ class TicketActivity : AppCompatActivity() {
                 gravity = Gravity.RIGHT
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.8f)
             })
+        }
+    }
+
+    // Fungsi Pembantu: Generate QR Code Menggunakan ZXing
+    private fun generateQRCode(text: String, size: Int): Bitmap? {
+        try {
+            val bitMatrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
+            val width = bitMatrix.width
+            val height = bitMatrix.height
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    bitmap.setPixel(x, y, if (bitMatrix.get(x, y)) Color.BLACK else Color.WHITE)
+                }
+            }
+            return bitmap
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
         }
     }
 }
