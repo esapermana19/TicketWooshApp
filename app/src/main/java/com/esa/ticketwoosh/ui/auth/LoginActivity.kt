@@ -284,7 +284,7 @@ class LoginActivity : AppCompatActivity() {
                             val loginData = response.body()!!
 
                             loginData.token?.let { token ->
-                                sessionManager.saveAuthToken(token)
+                                sessionManager.saveAuthToken(token, loginData.user?.fullName ?: "Penumpang")
                             }
 
                             Toast.makeText(this@LoginActivity, "Login Sukses!", Toast.LENGTH_LONG).show()

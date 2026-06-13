@@ -29,6 +29,7 @@ class BookingActivity : AppCompatActivity() {
     private lateinit var viewPager: ViewPager2
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var autoScrollRunnable: Runnable
+    private lateinit var clockRunnable: Runnable
 
     // State untuk Stasiun (Data dari Database Laravel)
     private var stationList = ArrayList<String>() // Menampung nama-nama stasiun dari DB
@@ -102,15 +103,13 @@ class BookingActivity : AppCompatActivity() {
             )
         }
 
-        val whooshTitle = TextView(this).apply {
-            text = "Whoosh"
-            textSize = 32f
-            setTypeface(null, Typeface.BOLD_ITALIC)
+        val greetingText = TextView(this).apply {
+            textSize = 24f
+            setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
         }
 
-        val subtitle = TextView(this).apply {
-            text = "Jakarta - Bandung High Speed Train"
+        val clockText = TextView(this).apply {
             textSize = 14f
             setTextColor(Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(
@@ -118,8 +117,33 @@ class BookingActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = (4 * density).toInt() }
         }
-        topHeader.addView(whooshTitle)
-        topHeader.addView(subtitle)
+        
+        topHeader.addView(greetingText)
+        topHeader.addView(clockText)
+
+        // Setup clock runnable
+        val sessionManager = com.esa.ticketwoosh.utils.SessionManager(this)
+        clockRunnable = object : Runnable {
+            override fun run() {
+                val now = Calendar.getInstance()
+                val hour = now.get(Calendar.HOUR_OF_DAY)
+                val greeting = when (hour) {
+                    in 0..10 -> "Selamat Pagi"
+                    in 11..14 -> "Selamat Siang"
+                    in 15..17 -> "Selamat Sore"
+                    else -> "Selamat Malam"
+                }
+                val name = sessionManager.getFullName().split(" ").firstOrNull() ?: "Penumpang"
+                greetingText.text = "$greeting, $name!"
+                
+                val sdf = SimpleDateFormat("EEE, dd MMM yyyy • HH:mm:ss", Locale("id", "ID"))
+                clockText.text = sdf.format(now.time)
+                
+                handler.postDelayed(this, 1000)
+            }
+        }
+        handler.post(clockRunnable)
+
         scrollContent.addView(topHeader)
 
         // --- Banner Carousel ---
@@ -591,6 +615,9 @@ class BookingActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(autoScrollRunnable)
+        if (::clockRunnable.isInitialized) {
+            handler.removeCallbacks(clockRunnable)
+        }
     }
 
     inner class BannerAdapter(private val images: List<Int>) : RecyclerView.Adapter<BannerAdapter.BannerViewHolder>() {
